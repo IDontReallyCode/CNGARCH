@@ -13,7 +13,7 @@
 
 # TODO : GENERAL beef up all the __str__
 
-from numba import jit
+from numba import njit
 
 from math import pi
 import warnings
@@ -181,27 +181,8 @@ class gmodel:
 
 
 
-@jit
-def _numbafiltergarch11(_R, vpath, W, Z, _lambda, omega, _beta, _alpha, N):
-    for t in range(1,N):
-        penalty = False
-        vpath[t] = omega + _beta*vpath[t-1] + _alpha*vpath[t-1]*(Z[t-1])**2
-        if (vpath[t]<0 or vpath[t]>1):
-            LL = 9999.0*(omega+_beta+_alpha)**2
-            penalty = True
-            break
-
-        W[t] = (_R[t] - _lambda*sqrt(vpath[t]) + 0.5*vpath[t])
-        Z[t] = W[t] / np.sqrt(vpath[t])
-
-    if not penalty:
-        objective = -0.5 *( np.log(2*pi) + np.log(vpath) + np.divide(np.multiply(W,W),vpath) )
-        LL = -np.sum(objective)
-
-    return LL, vpath
-
-@jit(nopython=True)
-def _numbafiltersgarch11(_R, vpath, W, Z, _la, _p1, _a1, N):
+@njit
+def _numbafiltergarch(_R, vpath, W, Z, _la, _p1, _a1, N):
     penalty = False
     for t in range(1,N):
         vpath[t] = (vpath[0]) + _p1*(vpath[t-1] - vpath[0]) + _a1*vpath[t-1]*(Z[t-1]*Z[t-1] - 1)
@@ -220,8 +201,8 @@ def _numbafiltersgarch11(_R, vpath, W, Z, _la, _p1, _a1, N):
     return LL, vpath
 
 
-@jit(nopython=True)
-def _numbafilterngarch11(_R, vpath, W, Z, _la, _p1, _a1, _g1, N):
+@njit
+def _numbafilterngarch(_R, vpath, W, Z, _la, _p1, _a1, _g1, N):
     penalty = False
     for t in range(1,N):
         vpath[t] = (vpath[0]) + _p1*(vpath[t-1] - vpath[0]) + _a1*vpath[t-1]*(Z[t-1]*Z[t-1] - 1 - 2*_g1*Z[t-1])
@@ -239,8 +220,8 @@ def _numbafilterngarch11(_R, vpath, W, Z, _la, _p1, _a1, _g1, N):
 
     return LL, vpath
 
-@jit(nopython=True)
-def _numbafilterngarch22(_R, vpath, qpath, W, Z, _la, _p1, _a1, _g1, _p2, _a2, _g2, N):
+@njit
+def _numbafiltercngarch(_R, vpath, qpath, W, Z, _la, _p1, _a1, _g1, _p2, _a2, _g2, N):
     penalty = False
     for t in range(1,N):
         qpath[t] = (vpath[0])   + _p2*(qpath[t-1] - vpath[0])   + _a2*vpath[t-1]*(Z[t-1]*Z[t-1] - 1 - 2*_g2*Z[t-1])
@@ -262,7 +243,7 @@ def _numbafilterngarch22(_R, vpath, qpath, W, Z, _la, _p1, _a1, _g1, _p2, _a2, _
 
 
 
-class sgarch11(gmodel):
+class garch(gmodel):
     # 
     def __init__(self, x='[lambda, sigma, persistense, alpha]', R=np.zeros((1, )), targetK=False) -> None:
         super().__init__(x, R=R)
@@ -364,14 +345,14 @@ class sgarch11(gmodel):
         W[0] = self._R[0] - self._la*sqrt(vpath[0]) + 0.5*vpath[0]
         Z[0] = W[0] / sqrt(vpath[0]) 
 
-        LL, vpath = _numbafiltersgarch11(self._R, vpath, W, Z, self._la, self._p1, self._a1, N)
+        LL, vpath = _numbafiltergarch(self._R, vpath, W, Z, self._la, self._p1, self._a1, N)
 
         self.vpath = vpath
         self.loglikelihood = LL
         return LL
 
 
-class ngarch11(gmodel):
+class ngarch(gmodel):
     # 
     def __init__(self, x='[lambda, sigma, persistense, alpha, gamma]', R=np.zeros((1, )), targetK=False) -> None:
         super().__init__(x, R=R)
@@ -473,15 +454,15 @@ class ngarch11(gmodel):
         W[0] = self._R[0] - self._la*sqrt(vpath[0]) + 0.5*vpath[0]
         Z[0] = W[0] / sqrt(vpath[0]) 
 
-        LL, vpath = _numbafilterngarch11(self._R, vpath, W, Z, self._la, self._p1, self._a1, self._g1, N)
+        LL, vpath = _numbafilterngarch(self._R, vpath, W, Z, self._la, self._p1, self._a1, self._g1, N)
 
         self.vpath = vpath
         self.loglikelihood = LL
         return LL
 
 
-class ngarch22(gmodel):
-    # https://www.proquest.com/openview/c3f3b3ee3fcca1e754816685c8bb56cc/1.pdf/advanced
+class cngarch(gmodel):
+    # 
     def __init__(self, x='[lambda, sigma, persistense, alpha, gamma, rho, alph2, gamm2]', R=np.zeros((1, )), Qpers=False) -> None:
         super().__init__(x, R=R)
         self._Qpers = Qpers
@@ -500,7 +481,7 @@ class ngarch22(gmodel):
             self._p2 = 1 - self._a2 * (1 + (self._g2 + self._la)*(self._g2 + self._la)) + self._a2 * (1 + self._g2*self._g2)
 
     def __str__(self) -> str:
-        smodel = "NGARCH(1,1)"
+        smodel = "Component NGARCH(1,1)"
         if not self._Qpers:
             smodel = smodel + "\n"
         else:
@@ -513,9 +494,9 @@ class ngarch22(gmodel):
     @property
     def glabel(self):
         if not self._Qpers:
-            return 'NGARCH(2,2)'
+            return 'Component NGARCH(1,1)'
         else:
-            return f"NGARCH(2,2) with full Q persistence"
+            return f"CNGARCH(1,1) with full Q persistence"
 
     def set_theta(self, x):
         self._la = x[0]
@@ -618,7 +599,7 @@ class ngarch22(gmodel):
         W[0] = self._R[0] - self._la*sqrt(vpath[0]) + 0.5*vpath[0]
         Z[0] = W[0] / sqrt(vpath[0]) 
 
-        LL, vpath, qpath = _numbafilterngarch22(self._R, vpath, qpath, W, Z, self._la, self._p1, self._a1, self._g1, self._p2, self._a2, self._g2, N)
+        LL, vpath, qpath = _numbafiltercngarch(self._R, vpath, qpath, W, Z, self._la, self._p1, self._a1, self._g1, self._p2, self._a2, self._g2, N)
         
         self.qpath = qpath
         self.vpath = vpath
