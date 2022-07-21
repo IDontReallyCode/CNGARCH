@@ -19,7 +19,7 @@ from math import pi
 import warnings
 
 import numpy as np
-from numpy import sqrt
+from numpy import ndarray, sqrt
 from numpy import linalg as LA
 from scipy.optimize import basinhopping, minimize
 import multiprocessing as mp
@@ -98,6 +98,18 @@ class gmodel:
 
     def forecast(self, kdays:int)->np.ndarray:
         pass
+
+    def genrandomthetas(self, bounds: ndarray, n: int, seed: int = 1):
+        size = len(bounds)
+        rng = np.random.default_rng(seed)
+        w = rng.random((n,size))
+        theta = np.zeros((n,size))
+        for idx in range(size):
+            theta[:,idx] = (bounds[idx][1]-bounds[idx][0]) * w[:,idx] + bounds[idx][0]
+            checkthisone=1
+
+        return theta
+
 
     def estimate(self, optimizer='minimize', nbhopping=10):
         # optimizer='minimize' or 'basinhopping'
@@ -486,7 +498,7 @@ class cngarch(gmodel):
             smodel = smodel + "\n"
         else:
             smodel = smodel + f" with full Qpers\n"
-        sparam = f"[lambda, sigma, persistense, alpha, gamma, rho, alph2, gamm2] = ["\
+        sparam = f"[lambda, sigma, pers. ST, alpha_1, gamma_1, pers. LT, alpha_2, gamma_2] = ["\
             f"{self._la}, {self._sg}, {self._p1}, {self._a1}, {self._g1}, "\
                 f"{self._p2}, {self._a2}, {self._g2}]\n"
         return super().__str__() + smodel + sparam
