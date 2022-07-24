@@ -254,6 +254,28 @@ def _numbafiltercngarch(_R, vpath, qpath, W, Z, _la, _p1, _a1, _g1, _p2, _a2, _g
     return LL, vpath, qpath
 
 
+@njit
+def _numbafiltercgarch(_R, vpath, qpath, W, Z, _la, _p1, _a1, _p2, _a2, N):
+    penalty = False
+    for t in range(1,N):
+        qpath[t] = (vpath[0])   + _p2*(qpath[t-1] - vpath[0])   + _a2*vpath[t-1]*(Z[t-1]*Z[t-1] - 1)
+        vpath[t] = (qpath[t])   + _p1*(vpath[t-1] - qpath[t-1]) + _a1*vpath[t-1]*(Z[t-1]*Z[t-1] - 1)
+
+        if (vpath[t]<=1E-6 or qpath[t]<=1E-6 or vpath[t]>1 or qpath[t]>1):
+            LL = 9999.0*(_p1+_a1+_p2+_a2)**2
+            penalty = True
+            break
+
+        W[t] = (_R[t] - _la*sqrt(vpath[t]) + 0.5*vpath[t])
+        Z[t] = W[t] / sqrt(vpath[t])
+
+    if not penalty:
+        objective = -0.5 *( np.log(2*pi) + np.log(vpath) + np.divide(np.multiply(W,W),vpath) )
+        LL = -np.sum(objective)
+
+    return LL, vpath, qpath
+
+
 
 class garch(gmodel):
     # 
@@ -362,6 +384,147 @@ class garch(gmodel):
         self.vpath = vpath
         self.loglikelihood = LL
         return LL
+
+
+class cgarch(gmodel):
+    # 
+    def __init__(self, x='[lambda, sigma, ST_persistence, alpha_ST, LT_persistence, alpha_LT]', R=np.zeros((1, )), Qpers=False) -> None:
+        super().__init__(x, R=R)
+        self._Qpers = Qpers
+        self._la = x[0]
+        self._sg = x[1]
+        self._p1 = x[2]
+        self._a1 = x[3]
+        if not self._Qpers:
+            self._p2 = x[4]
+            self._a2 = x[5]
+        else:
+            self._a2 = x[4]
+            self._p2 = 1 - self._a2 * (1 + (self._la*self._la)) + self._a2
+
+    def __str__(self) -> str:
+        smodel = "Component GARCH(1,1)"
+        if not self._Qpers:
+            smodel = smodel + "\n"
+        else:
+            smodel = smodel + f" with full Qpers\n"
+        sparam = f"[lambda, sigma, ST_persistence, ST_alpha, LT_persistence LT_alpha] = ["\
+            f"{self._la}, {self._sg}, {self._p1}, {self._a1}, "\
+                f"{self._p2}, {self._a2}]\n"
+        return super().__str__() + smodel + sparam
+
+    @property
+    def glabel(self):
+        if not self._Qpers:
+            return 'Component GARCH(1,1)'
+        else:
+            return f"CGARCH(1,1) with full Q persistence"
+
+    def set_theta(self, x):
+        self._la = x[0]
+        self._sg = x[1]
+        self._p1 = x[2]
+        self._a1 = x[3]
+        if not self._Qpers:
+            self._p2 = x[4]
+            self._a2 = x[5]
+        else:
+            self._a2 = x[4]
+            self._p2 = 1 - self._a2 * (1 + (self._la*self._la)) + self._a2
+        return super().set_theta(x)
+
+
+    @property
+    def persistenceP(self):
+        return self._p1
+
+
+    @property
+    def persistenceQ(self):
+        return self._p1 - self._a1 + self._a1 * (1 + (self._la*self._la))
+
+
+    def _penalty_constraints(self):
+        # unc.vol. positive
+        penalty = self._pen(-self._sg+1E-10)
+        # Q Persistence < 1
+        penalty = penalty + self._pen(self.persistenceQ-1)
+        # alpha > 0
+        penalty = penalty + self._pen(-self._a1)
+        penalty = penalty + self._pen(-self._a2)
+        penalty = penalty + self._pen(-self._p1)
+        penalty = penalty + self._pen(-self._p2)
+        penalty = penalty + self._pen(self._a1-1)
+        penalty = penalty + self._pen(self._a2-1)
+        penalty = penalty + self._pen(self._p2-1)
+        penalty = penalty + self._pen(self._sg-1) # That means a long term annual volatility of 1,581% ...
+    
+        return penalty
+
+
+    def forecast(self, kdays:int)->np.ndarray:
+        if not self.vpath[-1]>0:
+            self.filter()
+        
+        self.vforecast = np.ones((kdays,),dtype=float)*self.vpath[-1]
+        self.qforecast = np.ones((kdays,),dtype=float)*self.qpath[-1]
+        
+        var = self._sg*self._sg
+
+        for t in range(1,kdays):
+            self.qforecast[t] = var                + self._p2*(self.qforecast[t-1] - var)         
+            self.vforecast[t] = self.qforecast[t]  + self._p1*(self.vforecast[t-1] - self.qforecast[t])   
+            if (self.vforecast[t]<1E-6):
+                self.vforecast[t]=1E-6
+            if (self.qforecast[t]<1E-6):
+                self.qforecast[t]=1E-6
+
+    def filter(self, output="variance", debug=False):
+        np.seterr(all='raise')
+        N = len(self._R)
+        penalty = self._penalty_constraints()
+        if debug:
+            print(f"Penalty = {penalty}")
+        if penalty>0:
+            if output=='estimate':
+                return penalty
+            else:
+                warnings.warn('The set of parameters creates a penalty. Filtering might be bad')
+                # vpath = np.zeros((N,), dtype=float)
+                # qpath = np.zeros((N,), dtype=float)
+                self.qpath = np.zeros((N,), dtype=float)
+                self.vpath = np.zeros((N,), dtype=float)
+                self.success = False
+                return
+        
+        vpath = np.zeros((N,), dtype=float)
+        qpath = np.zeros((N,), dtype=float)
+        W     = np.zeros((N,), dtype=float)
+        Z     = np.zeros((N,), dtype=float)
+
+        vpath[0] = self._sg*self._sg
+        if vpath[0]<1E-6:
+            if output=='estimate':
+                return 9999*LA.norm(self.x)
+            else:
+                warnings.warn('The filtering found a negative variance. Filtering might be bad')
+                self.qpath = np.zeros((N,), dtype=float)
+                self.vpath = np.zeros((N,), dtype=float)
+                self.success = False
+                return
+        qpath[0] = vpath[0]
+
+
+        W[0] = self._R[0] - self._la*sqrt(vpath[0]) + 0.5*vpath[0]
+        Z[0] = W[0] / sqrt(vpath[0]) 
+
+        LL, vpath, qpath = _numbafiltercgarch(self._R, vpath, qpath, W, Z, self._la, self._p1, self._a1, self._p2, self._a2, N)
+        
+        self.qpath = qpath
+        self.vpath = vpath
+        self.loglikelihood = LL
+        return LL
+
 
 
 class ngarch(gmodel):

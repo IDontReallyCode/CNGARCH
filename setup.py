@@ -1,7 +1,7 @@
 import setuptools
 
-setuptools.setup(name='CNGARCH',
-version='0.1',
+setuptools.setup(name='cngarch',
+version='0.4',
 description='Estimate and Forecast using Component NGARCH models',
 url='#',
 author='max',
