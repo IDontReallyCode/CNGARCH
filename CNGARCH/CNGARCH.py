@@ -341,6 +341,8 @@ class garch(gmodel):
         # alpha > 0
         penalty = penalty + self._pen(-self._a1)
         penalty = penalty + self._pen(self._sg-1) # That means a long term annual volatility of 1,581% ...
+        if penalty>0:
+            stophere=1
 
         return penalty
 
