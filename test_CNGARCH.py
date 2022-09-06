@@ -46,9 +46,9 @@ def main():
 
     GARCH.estimate()
     GARCH.filter()
-    # ax2.plot(np.sqrt(GARCH.vpath*252)*100, label='GARCH')
+    ax2.plot(np.sqrt(GARCH.vpath*252)*100, label='GARCH')
     ax2.set_ylabel('Annual volatility (%)')
-    # plt.show()
+    plt.show()
     GARCH.forecast(kdays=20)
 
 

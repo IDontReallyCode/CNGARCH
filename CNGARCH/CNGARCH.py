@@ -47,6 +47,7 @@ class gmodel:
         self._debug = False
         self._bounds = None
         self._estimationtime = -1.0
+        self._multix = x
 
     def __str__(self) -> str:
         return "General GARCH Model\n"
@@ -108,6 +109,7 @@ class gmodel:
             theta[:,idx] = (bounds[idx][1]-bounds[idx][0]) * w[:,idx] + bounds[idx][0]
             checkthisone=1
 
+        self._multix = theta
         return theta
 
 
@@ -156,7 +158,9 @@ class gmodel:
             return False
 
 
-    def parallel(self, thetas, Ncores=4, estpool=None):
+    def parallel(self, thetas=None, Ncores=4, estpool=None):
+        if thetas is None:
+            thetas = self._multix
         nbest = np.size(thetas,0)
         thetaout = np.ones_like(thetas)
         timers   = np.zeros((nbest,), dtype=float)
@@ -278,7 +282,10 @@ def _numbafiltercgarch(_R, vpath, qpath, W, Z, _la, _p1, _a1, _p2, _a2, N):
 
 
 class garch(gmodel):
-    # 
+    """
+        GARCH model
+        x=[lambda, sigma (per period), persistence, alpha]
+    """ 
     def __init__(self, x='[lambda, sigma, persistense, alpha]', R=np.zeros((1, )), targetK=False) -> None:
         super().__init__(x, R=R)
         self._targetK = targetK
@@ -308,6 +315,10 @@ class garch(gmodel):
             return 'NGARCH(1,1)'
         else:
             return f"NGARCH-KTE-{self._targetK}"
+
+    @property
+    def uncvol(self):
+        return self._sg
 
     def set_theta(self, x):
         self._la = x[0]
@@ -389,7 +400,10 @@ class garch(gmodel):
 
 
 class cgarch(gmodel):
-    # 
+    """
+        Component-GARCH model
+        x=[lambda, sigma (per period), ST_persistence, alpha_ST, LT_persistence, alpha_LT]
+    """
     def __init__(self, x='[lambda, sigma, ST_persistence, alpha_ST, LT_persistence, alpha_LT]', R=np.zeros((1, )), Qpers=False) -> None:
         super().__init__(x, R=R)
         self._Qpers = Qpers
@@ -414,6 +428,13 @@ class cgarch(gmodel):
             f"{self._la}, {self._sg}, {self._p1}, {self._a1}, "\
                 f"{self._p2}, {self._a2}]\n"
         return super().__str__() + smodel + sparam
+
+
+    @property
+    def uncvol(self):
+        return self._sg
+
+
 
     @property
     def glabel(self):
