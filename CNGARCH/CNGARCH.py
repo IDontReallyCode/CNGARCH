@@ -43,6 +43,11 @@ class gmodel:
         self.ppath = np.zeros((1,), dtype=float)
         self.npath = np.zeros((1,), dtype=float)
         self.mpath = np.zeros((1,), dtype=float)
+        self.vforecast = np.zeros((1,), dtype=float)
+        self.qforecast = np.zeros((1,), dtype=float)
+        self.pforecast = np.zeros((1,), dtype=float)
+        self.nforecast = np.zeros((1,), dtype=float)
+        self.mforecast = np.zeros((1,), dtype=float)
         self._optimizeoptions = {'ftol':1e-12, 'gtol': 1e-12, 'disp': False, 'eps': 1e-10, 'iprint':1, 'maxcor':30} 
         self._debug = False
         self._bounds = None
