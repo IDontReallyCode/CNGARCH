@@ -1,8 +1,8 @@
 import setuptools
 
 setuptools.setup(name='cngarch',
-version='0.4',
-description='Estimate and Forecast using Component NGARCH models',
+version='1.0.0',
+description='Estimate and Forecast using Component NGARCH models, uses skleanr metrics',
 url='#',
 author='max',
 author_email='letournp@uww.edu',

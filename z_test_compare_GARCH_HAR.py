@@ -131,28 +131,28 @@ def main():
     axes[0,0].plot( np.sqrt(results[1]['model']['forecast'][minT:maxT]*252), label='HAR_WOLS')
     axes[0,0].plot( np.sqrt(results[1]['realized']['target'][minT:maxT]*252), label='REAL')
     axes[0,0].set_title(f"1-day forecast: GARCH RMSE={cgarch_results[1]['model']['RMSE']:0.2E}, HAR RMSE={results[1]['model']['RMSE']:0.2E}\n"+
-                            f" GARCH R^2={cgarch_results[1]['model']['AdjRsquare']:0.2E}, HAR R^2={results[1]['model']['AdjRsquare']:0.2E}")
+                            f" GARCH R^2={cgarch_results[1]['model']['AdjRsquare']:0.2}, HAR R^2={results[1]['model']['AdjRsquare']:0.2}")
     axes[0,0].legend()
 
     axes[0,1].plot( np.sqrt(cgarch_results[5]['model']['forecast'][minT:maxT]*252), label='GARCH')
     axes[0,1].plot( np.sqrt(results[5]['model']['forecast'][minT:maxT]*252), label='HAR_WOLS')
     axes[0,1].plot( np.sqrt(results[5]['realized']['target'][minT:maxT]*252), label='REAL')
     axes[0,1].set_title(f"5-day forecast: GARCH RMSE={cgarch_results[5]['model']['RMSE']:0.2E}, HAR RMSE={results[5]['model']['RMSE']:0.2E}\n"+
-                            f" GARCH R^2={cgarch_results[5]['model']['AdjRsquare']:0.2E}, HAR R^2={results[5]['model']['AdjRsquare']:0.2E}")
+                            f" GARCH R^2={cgarch_results[5]['model']['AdjRsquare']:0.2}, HAR R^2={results[5]['model']['AdjRsquare']:0.2}")
     axes[0,1].legend()
 
     axes[1,0].plot( np.sqrt(cgarch_results[10]['model']['forecast'][minT:maxT]*252), label='GARCH')
     axes[1,0].plot( np.sqrt(results[10]['model']['forecast'][minT:maxT]*252), label='HAR_WOLS')
     axes[1,0].plot( np.sqrt(results[10]['realized']['target'][minT:maxT]*252), label='REAL')
     axes[1,0].set_title(f"10-day forecast: GARCH RMSE={cgarch_results[10]['model']['RMSE']:0.2E}, HAR RMSE={results[10]['model']['RMSE']:0.2E}\n"+
-                            f" GARCH R^2={cgarch_results[10]['model']['AdjRsquare']:0.2E}, HAR R^2={results[10]['model']['AdjRsquare']:0.2E}")
+                            f" GARCH R^2={cgarch_results[10]['model']['AdjRsquare']:0.2}, HAR R^2={results[10]['model']['AdjRsquare']:0.2}")
     axes[1,0].legend()
 
     axes[1,1].plot( np.sqrt(cgarch_results[20]['model']['forecast'][minT:maxT]*252), label='GARCH')
     axes[1,1].plot( np.sqrt(results[20]['model']['forecast'][minT:maxT]*252), label='HAR_WOLS')
     axes[1,1].plot( np.sqrt(results[20]['realized']['target'][minT:maxT]*252), label='REAL')
     axes[1,1].set_title(f"20-day forecast: GARCH RMSE={cgarch_results[20]['model']['RMSE']:0.2E}, HAR RMSE={results[20]['model']['RMSE']:0.2E}\n"+
-                            f" GARCH R^2={cgarch_results[20]['model']['AdjRsquare']:0.2E}, HAR R^2={results[20]['model']['AdjRsquare']:0.2E}")
+                            f" GARCH R^2={cgarch_results[20]['model']['AdjRsquare']:0.2}, HAR R^2={results[20]['model']['AdjRsquare']:0.2}")
     axes[1,1].legend()
     fig.tight_layout()
     if target==HAR.PEAKDREALIZEDVARIANCE:
