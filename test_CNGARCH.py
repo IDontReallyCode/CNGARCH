@@ -3,77 +3,100 @@ import numpy as np
 import pandas as pd
 import cngarch as cg
 import matplotlib.pyplot as plt
-
+import matplotlib.dates as mdates
 
 def main():
     # Get a daily time series of prices
     TS = pd.read_csv(f"./hd_QQQ.csv")
+    # Convert the date to a nice format for the graphs
+    TS['date_eod'] = pd.to_datetime(TS['date_eod'])
     # Calculate daily log-returns
     TS['lret'] = np.log1p(TS.close.pct_change())
     # Drop NAN or whatever
     TS = TS.dropna()
-    # Keep only the the last 3200 days of time series if longer
-    if len(TS)>3020:
-        TS = TS.iloc[-4800:]
-
-
-    fig, (ax1,ax2) = plt.subplots(2,1, sharex=True, sharey=False)
-    ax1.plot(np.array(TS['lret']**2))
-    ax1.set_title('Raw squared returns')
-    ax2.set_title('GARCH filtering')
-
-    # plt.show()
-
-    # Divide the time series in 75% to estimate, and 25% to test
-    n = len(TS['lret'])
-    # n_is1 = int(np.round(n*0.75,0))
-    # Rin1 = np.array(TS['lret'].iloc[0:n_is1])
-    # Rout = np.array(TS['lret'].iloc[n_is1+1:])
+    # Keep only the the last 10 years (2520 days) of time series
+    if len(TS)>2520:
+        TS = TS.iloc[-2520:]
+    # Get the returns into a numpy array
     Rall = np.array(TS['lret'])
     
-    GARCH = cg.garch([0.1, 0.02, 0.95, 0.01], Rall)
-    NGARCH = cg.ngarch([0.1, 0.02, 0.95, 0.01, 0.1], Rall)
+    # Prepare 2 GARCH specifications with a set of initial values and the series of returns
+    GARCH = cg.garch([0.1, 0.02, 0.90, 0.01], Rall)
     CNGARCH = cg.cngarch([0.1, 0.02, 0.65, 0.01, 0.1, 0.995, 0.01, 0.1], Rall)
 
-    bounds_ngarch   = ((0,None), (0.001,0.06), (0.8,1), (0,0.5), (-5,+5))
-    bounds_cngarch   = ((0,None), (0.001,0.06), (0.5,1), (0.01,0.1), (-5,+5), (0.9,0.99999), (0,0.2), (-5,+5))
-    initrange_cngarch   = ((0,0.5), (0.001,0.01), (0.3,0.9), (0.02,0.1), (-5,+5), (0.9,0.99999), (0.001,0.05), (-5,+5))
+    # Determine bounds on the coefficients to help the estimation
+    GARCH.OptimizationBounds   = ((0,None), (0.001,0.06), (0.5,1), (0.01,0.1))
+    CNGARCH.OptimizationBounds = ((0,None), (0.001,0.06), (0.5,1), (0.01,0.1), (-5,+5), (0.9,0.99999), (0,0.2), (-5,+5))
 
+    # We can generate a series of random starting values to avoid local minima in the estimation
+    # I use 5 as an example on how to use it, but 500 would be better
+    initrange___garch  = ((0,0.5), (0.001,0.01), (0.3,0.9), (0.02,0.1))
+    initrange_cngarch  = ((0,0.5), (0.001,0.01), (0.3,0.9), (0.02,0.1), (-5,+5), (0.9,0.99999), (0.001,0.05), (-5,+5))
+    theta___garch =   GARCH.genrandomthetas(initrange___garch, n=50, seed=1)
+    theta_cngarch = CNGARCH.genrandomthetas(initrange_cngarch, n=50, seed=1)
 
-    NGARCH.OptimizationBounds=bounds_ngarch
-    CNGARCH.OptimizationBounds=bounds_cngarch
-    theta = CNGARCH.genrandomthetas(initrange_cngarch, n=500, seed=1)
+    forecastndays = 40
 
+    # We can estimate using the set of coefficeints from the object creation
     GARCH.estimate()
     GARCH.filter()
-    ax2.plot(np.sqrt(GARCH.vpath*252)*100, label='GARCH')
-    ax2.set_ylabel('Annual volatility (%)')
-    # plt.show()
-    GARCH.forecast(kdays=20)
+    print(GARCH)
+    # We can now forecast
+    GARCH.forecast(kdays=forecastndays+1)
+    print("Forecast, including the current day filtered volatility value")
+    print(np.sqrt(GARCH.vforecast*252)*100)
+
+    # We can estimate using the set of random starting values
+    GARCH.parallel(Ncores=4)
+    print(GARCH)
+    GARCH.forecast(kdays=forecastndays)
+    print("Forecast, including the current day filtered volatility value")
+    print(np.sqrt(GARCH.vforecast*252)*100)
+    # Observe that the regular estimation hit a local minima and the result is not that good.
     
-    NGARCH.estimate()
-    NGARCH.filter()
-    # ax2.plot(np.sqrt(NGARCH.vpath*252)*100, label='NGARCH')
-    NGARCH.forecast(kdays=20)
+    fig, axes = plt.subplots(3,1, sharex=False, sharey=False)
+    years = mdates.YearLocator()   # every year
+    months = mdates.MonthLocator()  # every month
+    yearsFmt = mdates.DateFormatter('%Y')
 
-    CNGARCH.estimate()
+    axes[0].plot(TS['date_eod'], np.sqrt(np.array(TS['lret']**2)*252)*100)
+    axes[0].set_title('Raw squared returns with simple GARCH filtering overlay')
+    axes[0].xaxis.set_major_locator(years)
+    axes[0].xaxis.set_major_formatter(yearsFmt)
+    axes[0].xaxis.set_minor_locator(months)
+    axes[1].plot(TS['date_eod'], np.sqrt(GARCH.vpath*252)*100, label='GARCH')
+    axes[1].set_title('simple GARCH filtering compared to CNGARCH filtering')
+    axes[1].set_ylabel('Annual volatility (%)')
+    fig.tight_layout()
+
+    # Now let us use a more flexible model with 2 components
+    # Multiple starting values is strongly recommended for the first estimation
+    # Once you have the model well estimated, in backtesting setting, or live setting, 
+    # every following day, you can simply estimate with the previously estimated coefficeints as starting values
+    CNGARCH.parallel(Ncores=4)
     CNGARCH.filter()
-    ax2.plot(np.sqrt(CNGARCH.vpath*252)*100, label='CNGARCH total')
-    ax2.plot(np.sqrt(CNGARCH.qpath*252)*100, label='CNGARCH LT')
-    CNGARCH.forecast(kdays=20)
+    CNGARCH.forecast(kdays=forecastndays)
     print(CNGARCH)
+    print(np.sqrt(CNGARCH.vforecast*252)*100)
 
-    CNGARCH.parallel(theta, Ncores=16)
-    CNGARCH.filter()
-    ax2.plot(np.sqrt(CNGARCH.vpath*252)*100, label='CNGARCH 2 total')
-    ax2.plot(np.sqrt(CNGARCH.qpath*252)*100, label='CNGARCH 2 LT')
-    print(CNGARCH)
+    axes[1].plot(TS['date_eod'],np.sqrt(GARCH.vpath*252)*100,   label='GARCH')
+    axes[1].plot(TS['date_eod'],np.sqrt(CNGARCH.vpath*252)*100, label='CNGARCH total')
+    axes[1].plot(TS['date_eod'],np.sqrt(CNGARCH.qpath*252)*100, label='CNGARCH Long-Term')
+    axes[1].legend()
 
-    ax2.legend()
+
+    # Now, let us compare the forecasting by showing the last n days and next n days
+    xpast = np.arange(-forecastndays+1,1,1)
+    xfutu = np.arange(0,forecastndays+1,1)
+    axes[2].plot(xpast, np.sqrt(GARCH.vpath[-forecastndays:]*252)*100,   label='past')
+    axes[2].plot(xfutu, np.sqrt(GARCH.vforecast*252)*100,   label='forecast')
+    axes[2].plot(xpast, np.sqrt(CNGARCH.vpath[-forecastndays:]*252)*100,   label='past')
+    axes[2].plot(xfutu, np.sqrt(CNGARCH.vforecast*252)*100,   label='forecast')
+    axes[2].set_title(f"GARCH and CNGARCH forecast comparison for {forecastndays} days")
+    axes[2].legend()
+
     plt.show()
 
-
-    wearedone = 1
 
 
     
