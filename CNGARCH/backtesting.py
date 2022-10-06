@@ -70,7 +70,7 @@ def backtesting(
         model_mape = metrics.mean_absolute_percentage_error(Real[:,index], model_forecast[:,index])
 
 
-        output[ihor] = {'model':{'Rsquare':model_Rsquare, 'RMSE':model_RMSE, 'explainedvariancescore':model_evs, 'forecast':model_forecast[:,index], 'mae':model_mae, 'mape':model_mape}}
+        output[ihor] = {'model':{'Rsquare':model_Rsquare, 'RMSE':model_RMSE, 'evs':model_evs, 'forecast':model_forecast[:,index], 'mae':model_mae, 'mape':model_mape}}
     # package a nice dict 
 
     pausebeforereturn = 1

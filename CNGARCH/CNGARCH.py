@@ -305,8 +305,12 @@ class garch(gmodel):
             self._a1 = x[3]
             # self._g1 = x[4]
 
+
+    def name(self)->str:
+        return 'garch'
+
     def __str__(self) -> str:
-        smodel = "NGARCH(1,1)"
+        smodel = "GARCH(1,1)"
         if not self._targetK:
             smodel = smodel + "\n"
         else:
@@ -317,7 +321,7 @@ class garch(gmodel):
     @property
     def glabel(self):
         if not self._targetK:
-            return 'NGARCH(1,1)'
+            return 'GARCH(1,1)'
         else:
             return f"NGARCH-KTE-{self._targetK}"
 
@@ -367,10 +371,11 @@ class garch(gmodel):
         if not self.vpath[-1]>0:
             self.filter()
         
-        self.vforecast = np.ones((kdays,),dtype=float)*self.vpath[-1]
+        self.vforecast = np.ones((kdays+1,),dtype=float)*self.vpath[-1]
         variance = self._sg*self._sg
-        for ik in range(1,kdays):
+        for ik in range(1,kdays+1):
             self.vforecast[ik] = variance + self._p1*(self.vforecast[ik-1] - variance) 
+
 
     def filter(self, output="variance", debug=False):
         penalty = self._penalty_constraints()
@@ -423,6 +428,9 @@ class cgarch(gmodel):
             self._a2 = x[4]
             self._p2 = 1 - self._a2 * (1 + (self._la*self._la)) + self._a2
 
+    def name(self)->str:
+        return 'cgarch'
+
     def __str__(self) -> str:
         smodel = "Component GARCH(1,1)"
         if not self._Qpers:
@@ -444,7 +452,7 @@ class cgarch(gmodel):
     @property
     def glabel(self):
         if not self._Qpers:
-            return 'Component GARCH(1,1)'
+            return 'C-GARCH(1,1)'
         else:
             return f"CGARCH(1,1) with full Q persistence"
 
@@ -469,7 +477,7 @@ class cgarch(gmodel):
 
     @property
     def persistenceQ(self):
-        return self._p1 - self._a1 + self._a1 * (1 + (self._la*self._la))
+        return self._p2 - self._a2 + self._a2 * (1 + (self._la*self._la))
 
 
     def _penalty_constraints(self):
@@ -494,18 +502,19 @@ class cgarch(gmodel):
         if not self.vpath[-1]>0:
             self.filter()
         
-        self.vforecast = np.ones((kdays,),dtype=float)*self.vpath[-1]
-        self.qforecast = np.ones((kdays,),dtype=float)*self.qpath[-1]
+        self.vforecast = np.ones((kdays+1,),dtype=float)*self.vpath[-1]
+        self.qforecast = np.ones((kdays+1,),dtype=float)*self.qpath[-1]
         
         var = self._sg*self._sg
 
-        for t in range(1,kdays):
+        for t in range(1,kdays+1):
             self.qforecast[t] = var                + self._p2*(self.qforecast[t-1] - var)         
             self.vforecast[t] = self.qforecast[t]  + self._p1*(self.vforecast[t-1] - self.qforecast[t])   
             if (self.vforecast[t]<1E-6):
                 self.vforecast[t]=1E-6
             if (self.qforecast[t]<1E-6):
                 self.qforecast[t]=1E-6
+
 
     def filter(self, output="variance", debug=False):
         np.seterr(all='raise')
@@ -571,6 +580,9 @@ class ngarch(gmodel):
             self._a1 = x[3]
             self._g1 = x[4]
 
+    def name(self)->str:
+        return 'ngarch'
+
     def __str__(self) -> str:
         smodel = "NGARCH(1,1)"
         if not self._targetK:
@@ -627,9 +639,9 @@ class ngarch(gmodel):
         if not self.vpath[-1]>0:
             self.filter()
         
-        self.vforecast = np.ones((kdays,),dtype=float)*self.vpath[-1]
+        self.vforecast = np.ones((kdays+1,),dtype=float)*self.vpath[-1]
         variance = self._sg*self._sg
-        for ik in range(1,kdays):
+        for ik in range(1,kdays+1):
             self.vforecast[ik] = variance + self._p1*(self.vforecast[ik-1] - variance) 
 
     def filter(self, output="variance", debug=False):
@@ -683,6 +695,9 @@ class cngarch(gmodel):
             self._g2 = x[6]
             self._p2 = 1 - self._a2 * (1 + (self._g2 + self._la)*(self._g2 + self._la)) + self._a2 * (1 + self._g2*self._g2)
 
+    def name(self)->str:
+        return 'cngarch'
+
     def __str__(self) -> str:
         smodel = "Component NGARCH(1,1)"
         if not self._Qpers:
@@ -697,7 +712,7 @@ class cngarch(gmodel):
     @property
     def glabel(self):
         if not self._Qpers:
-            return 'Component NGARCH(1,1)'
+            return 'C-NGARCH(1,1)'
         else:
             return f"CNGARCH(1,1) with full Q persistence"
 
@@ -725,7 +740,7 @@ class cngarch(gmodel):
 
     @property
     def persistenceQ(self):
-        return self._p1 - self._a1 * (1 + self._g1*self._g1) + self._a1 * (1 + (self._g1 + self._la)*(self._g1 + self._la))
+        return self._p2 - self._a2 * (1 + self._g2*self._g2) + self._a2 * (1 + (self._g2 + self._la)*(self._g2 + self._la))
 
 
     def _penalty_constraints(self):
@@ -750,12 +765,12 @@ class cngarch(gmodel):
         if not self.vpath[-1]>0:
             self.filter()
         
-        self.vforecast = np.ones((kdays,),dtype=float)*self.vpath[-1]
-        self.qforecast = np.ones((kdays,),dtype=float)*self.qpath[-1]
+        self.vforecast = np.ones((kdays+1,),dtype=float)*self.vpath[-1]
+        self.qforecast = np.ones((kdays+1,),dtype=float)*self.qpath[-1]
         
         var = self._sg*self._sg
 
-        for t in range(1,kdays):
+        for t in range(1,kdays+1):
             self.qforecast[t] = var                + self._p2*(self.qforecast[t-1] - var)         
             self.vforecast[t] = self.qforecast[t]  + self._p1*(self.vforecast[t-1] - self.qforecast[t])   
             if (self.vforecast[t]<1E-6):
