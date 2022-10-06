@@ -48,10 +48,8 @@ def main():
     GARCH.filter()
     ax2.plot(np.sqrt(GARCH.vpath*252)*100, label='GARCH')
     ax2.set_ylabel('Annual volatility (%)')
-    plt.show()
+    # plt.show()
     GARCH.forecast(kdays=20)
-
-
     
     NGARCH.estimate()
     NGARCH.filter()
@@ -70,7 +68,6 @@ def main():
     ax2.plot(np.sqrt(CNGARCH.vpath*252)*100, label='CNGARCH 2 total')
     ax2.plot(np.sqrt(CNGARCH.qpath*252)*100, label='CNGARCH 2 LT')
     print(CNGARCH)
-
 
     ax2.legend()
     plt.show()
