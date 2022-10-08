@@ -105,13 +105,13 @@ class gmodel:
     def forecast(self, kdays:int)->np.ndarray:
         pass
 
-    def genrandomthetas(self, bounds: ndarray, n: int, seed: int = 1):
-        size = len(bounds)
+    def genrandomthetas(self, range:tuple, n: int, seed: int = 1):
+        size = len(range)
         rng = np.random.default_rng(seed)
         w = rng.random((n,size))
         theta = np.zeros((n,size))
         for idx in range(size):
-            theta[:,idx] = (bounds[idx][1]-bounds[idx][0]) * w[:,idx] + bounds[idx][0]
+            theta[:,idx] = (range[idx][1]-range[idx][0]) * w[:,idx] + range[idx][0]
             checkthisone=1
 
         self._multix = theta
