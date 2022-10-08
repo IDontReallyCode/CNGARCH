@@ -291,7 +291,10 @@ class garch(gmodel):
         GARCH model
         x=[lambda, sigma (per period), persistence, alpha]
     """ 
-    def __init__(self, x='[lambda, sigma, persistense, alpha]', R=np.zeros((1, )), targetK=False) -> None:
+    def __init__(self, x:list(float), R=np.zeros((1, )), targetK=False) -> None:
+        """
+            x = [lambda, sigma, persistense, alpha]
+        """
         super().__init__(x, R=R)
         self._targetK = targetK
         self._la = x[0]
@@ -414,7 +417,10 @@ class cgarch(gmodel):
         Component-GARCH model
         x=[lambda, sigma (per period), ST_persistence, alpha_ST, LT_persistence, alpha_LT]
     """
-    def __init__(self, x='[lambda, sigma, ST_persistence, alpha_ST, LT_persistence, alpha_LT]', R=np.zeros((1, )), Qpers=False) -> None:
+    def __init__(self, x:list(float), R=np.zeros((1, )), Qpers=False) -> None:
+        """
+            x='[lambda, sigma, ST_persistence, alpha_ST, LT_persistence, alpha_LT]'
+        """
         super().__init__(x, R=R)
         self._Qpers = Qpers
         self._la = x[0]
@@ -566,7 +572,10 @@ class cgarch(gmodel):
 
 class ngarch(gmodel):
     # 
-    def __init__(self, x='[lambda, sigma, persistense, alpha, gamma]', R=np.zeros((1, )), targetK=False) -> None:
+    def __init__(self, x=list(float), R=np.zeros((1, )), targetK=False) -> None:
+        """
+            x='[lambda, sigma, persistense, alpha, gamma]'
+        """
         super().__init__(x, R=R)
         self._targetK = targetK
         self._la = x[0]
@@ -678,7 +687,10 @@ class ngarch(gmodel):
 
 class cngarch(gmodel):
     # 
-    def __init__(self, x='[lambda, sigma, persistense, alpha, gamma, rho, alph2, gamm2]', R=np.zeros((1, )), Qpers=False) -> None:
+    def __init__(self, x:list(float), R=np.zeros((1, )), Qpers=False) -> None:
+        """
+            x='[lambda, sigma, persistense, alpha, gamma, rho, alph2, gamm2]'
+        """
         super().__init__(x, R=R)
         self._Qpers = Qpers
         self._la = x[0]
