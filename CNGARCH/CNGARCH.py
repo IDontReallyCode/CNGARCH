@@ -30,7 +30,7 @@ import time
 # TODO include estimation time series, and filter time series.
 # TODO include a simulation method, to be hooked in the LSMC block.
 class gmodel:
-    def __init__(self, x, R=np.zeros((1,))) -> None:
+    def __init__(self, x:list(float), R:np.ndarray=np.zeros((1,))) -> None:
         self._x = x
         self._R = R
         self._PenK = 999999.9
