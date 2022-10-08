@@ -30,7 +30,7 @@ import time
 # TODO include estimation time series, and filter time series.
 # TODO include a simulation method, to be hooked in the LSMC block.
 class gmodel:
-    def __init__(self, x:list(float), R:np.ndarray=np.zeros((1,))) -> None:
+    def __init__(self, x:list[float], R:np.ndarray=np.zeros((1,))) -> None:
         self._x = x
         self._R = R
         self._PenK = 999999.9
@@ -291,7 +291,7 @@ class garch(gmodel):
         GARCH model
         x=[lambda, sigma (per period), persistence, alpha]
     """ 
-    def __init__(self, x:list(float), R=np.zeros((1, )), targetK=False) -> None:
+    def __init__(self, x:list[float], R=np.zeros((1, )), targetK=False) -> None:
         """
             x = [lambda, sigma, persistense, alpha]
         """
@@ -417,7 +417,7 @@ class cgarch(gmodel):
         Component-GARCH model
         x=[lambda, sigma (per period), ST_persistence, alpha_ST, LT_persistence, alpha_LT]
     """
-    def __init__(self, x:list(float), R=np.zeros((1, )), Qpers=False) -> None:
+    def __init__(self, x:list[float], R=np.zeros((1, )), Qpers=False) -> None:
         """
             x='[lambda, sigma, ST_persistence, alpha_ST, LT_persistence, alpha_LT]'
         """
@@ -572,7 +572,7 @@ class cgarch(gmodel):
 
 class ngarch(gmodel):
     # 
-    def __init__(self, x=list(float), R=np.zeros((1, )), targetK=False) -> None:
+    def __init__(self, x=list[float], R=np.zeros((1, )), targetK=False) -> None:
         """
             x='[lambda, sigma, persistense, alpha, gamma]'
         """
@@ -687,7 +687,7 @@ class ngarch(gmodel):
 
 class cngarch(gmodel):
     # 
-    def __init__(self, x:list(float), R=np.zeros((1, )), Qpers=False) -> None:
+    def __init__(self, x:list[float], R=np.zeros((1, )), Qpers=False) -> None:
         """
             x='[lambda, sigma, persistense, alpha, gamma, rho, alph2, gamm2]'
         """
